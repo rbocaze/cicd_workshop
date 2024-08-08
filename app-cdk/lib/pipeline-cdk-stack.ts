@@ -30,10 +30,6 @@ export class MyPipelineStack extends cdk.Stack {
       buildSpec: codebuild.BuildSpec.fromSourceFilename('buildspec_test.yml'),
     });
 
-    // Define los artefactos
-    const sourceOutput = new codepipeline.Artifact();
-    const buildOutput = new codepipeline.Artifact();
-
     const dockerBuild = new codebuild.PipelineProject(this, 'DockerBuild', {
       environmentVariables: {
         IMAGE_TAG: { value: 'latest' },
@@ -69,7 +65,11 @@ export class MyPipelineStack extends cdk.Stack {
 
     dockerBuild.addToRolePolicy(dockerBuildRolePolicy);
 
+    // Define los artefactos
+    const sourceOutput = new codepipeline.Artifact();
+    const buildOutput = new codepipeline.Artifact();
     const dockerBuildOutput = new codepipeline.Artifact();
+    
 
     // Define el pipeline
     const pipeline = new codepipeline.Pipeline(this, 'Pipeline', {
