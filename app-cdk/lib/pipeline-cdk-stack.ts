@@ -33,7 +33,7 @@ export class MyPipelineStack extends cdk.Stack {
         new codepipeline_actions.GitHubSourceAction({
           actionName: 'GitHub_Source',
           owner: 'rbocaze', // Nombre de la organización
-          repo: 'repo_git',
+          repo: 'cicd_workshop',
           branch: 'main', // o la rama que prefieras
           oauthToken: githubSecret.secretValue,
           output: sourceOutput,
