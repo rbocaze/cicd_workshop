@@ -22,5 +22,6 @@ phases:
       - docker push $IMAGE_REPO_URI:$IMAGE_TAG
       - echo Writing image definitions file...
       - printf '[{"name":"my-app","imageUri":"%s"}]' $IMAGE_REPO_URI:$IMAGE_TAG > $CODEBUILD_SRC_DIR/imagedefinitions.json 
-  artifacts:
+  
+artifacts:
     files: imagedefinitions.json
