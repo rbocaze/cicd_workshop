@@ -8,10 +8,14 @@ import * as ecr from 'aws-cdk-lib/aws-ecr';
 import { CfnOutput, Stack, StackProps } from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
+import * as codedeploy from 'aws-cdk-lib/aws-codedeploy';
+import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 
 interface ConsumerProps extends StackProps {
   fargateServiceTest: ecsPatterns.ApplicationLoadBalancedFargateService,
   ecrRepository: ecr.Repository,
+  greenTargetGroup: elbv2.ApplicationTargetGroup,
+  greenLoadBalancerListener: elbv2.ApplicationListener,
   fargateServiceProd: ecsPatterns.ApplicationLoadBalancedFargateService,
 }
 
@@ -21,6 +25,7 @@ export class MyPipelineStack extends cdk.Stack {
 
     // Recupera el secreto de GitHub
     const githubSecret = secretsmanager.Secret.fromSecretNameV2(this, 'GitHubSecret', 'github/workshop_cicd');
+    const ecsCodeDeployApp = new codedeploy.EcsApplication(this, "my-app", { applicationName: 'my-app' });
 
     // Crea un proyecto de CodeBuild
     const codeBuild = new codebuild.PipelineProject(this, 'CodeBuild', {
@@ -30,6 +35,18 @@ export class MyPipelineStack extends cdk.Stack {
         computeType: codebuild.ComputeType.LARGE,
       },
       buildSpec: codebuild.BuildSpec.fromSourceFilename('buildspec_test.yml'),
+    });
+
+    const prodEcsDeploymentGroup = new codedeploy.EcsDeploymentGroup(this, "my-app-dg", {
+      service: props.fargateServiceProd.service,
+      blueGreenDeploymentConfig: {
+        blueTargetGroup: props.fargateServiceProd.targetGroup,
+        greenTargetGroup: props.greenTargetGroup,
+        listener: props.fargateServiceProd.listener,
+        testListener: props.greenLoadBalancerListener
+      },
+      deploymentConfig: codedeploy.EcsDeploymentConfig.LINEAR_10PERCENT_EVERY_1MINUTES,
+      application: ecsCodeDeployApp,
     });
 
     const dockerBuild = new codebuild.PipelineProject(this, 'DockerBuild', {
@@ -131,16 +148,17 @@ pipeline.addStage({
   stageName: 'Deploy-Production',
   actions: [
     new codepipeline_actions.ManualApprovalAction({
-      actionName: 'Approve-Deploy-Prod',
-      runOrder: 1,
+      actionName: 'Approve-Prod-Deploy',
+      runOrder: 1
     }),
-    new codepipeline_actions.EcsDeployAction({
-      actionName: 'Deploy-Fargate-Prod',
-      service: props.fargateServiceProd.service,
-      input: dockerBuildOutput,
-      runOrder: 2,
-    }),
-  ],
+    new codepipeline_actions.CodeDeployEcsDeployAction({
+      actionName: 'BlueGreen-deployECS',
+      deploymentGroup: prodEcsDeploymentGroup,
+      appSpecTemplateInput: sourceOutput,
+      taskDefinitionTemplateInput: sourceOutput,
+      runOrder: 2
+    })
+  ]
 });
 }
 }
