@@ -12,6 +12,7 @@ import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
 interface ConsumerProps extends StackProps {
   fargateServiceTest: ecsPatterns.ApplicationLoadBalancedFargateService,
   ecrRepository: ecr.Repository,
+  fargateServiceProd: ecsPatterns.ApplicationLoadBalancedFargateService,
 }
 
 export class MyPipelineStack extends cdk.Stack {
@@ -125,6 +126,21 @@ export class MyPipelineStack extends cdk.Stack {
           input: dockerBuildOutput,
         }),
       ]
+});
+pipeline.addStage({
+  stageName: 'Deploy-Production',
+  actions: [
+    new codepipeline_actions.ManualApprovalAction({
+      actionName: 'Approve-Deploy-Prod',
+      runOrder: 1,
+    }),
+    new codepipeline_actions.EcsDeployAction({
+      actionName: 'Deploy-Fargate-Prod',
+      service: props.fargateServiceProd.service,
+      input: dockerBuildOutput,
+      runOrder: 2,
+    }),
+  ],
 });
 }
 }

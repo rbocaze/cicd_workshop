@@ -10,9 +10,15 @@ const testCdkStack = new AppCdkStack(app, 'test', {
   ecrRepository: ecrCdkStack.repository,
 });
 
-new MyPipelineStack(app, 'MyPipelineStack', {
+
+const prodCdkStack = new AppCdkStack(app, 'prod', {
     ecrRepository: ecrCdkStack.repository,
-    fargateServiceTest: testCdkStack.fargateService,
-  });
+});
+
+new MyPipelineStack(app, 'MyPipelineStack', {
+  ecrRepository: ecrCdkStack.repository,
+  fargateServiceTest: testCdkStack.fargateService,
+  fargateServiceProd: prodCdkStack.fargateService,
+});
 
 
